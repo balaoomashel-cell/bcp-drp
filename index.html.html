@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>When the lights go out: BCP and DRP</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  color-scheme:dark light;
+  --navy:#111827;--cream:#f1eee6;
+  --amber:#f5a623;--teal:#2dd4bf;--coral:#f25f5c;
+  --bg:var(--navy);--ink:#f3f4f6;--muted:#9ca3af;--card:#1a2338;--line:#2a3550;--a:#f5a623;--t:#2dd4bf;
+  --lbg:#f1eee6;--link:#111827;--lmuted:#5b6475;--lcard:#ffffff;--lline:#d9d4c7;--la:#b45309;--lt:#0f766e;
+  --disp:"Bricolage Grotesque","Trebuchet MS",system-ui,sans-serif;
+  --body:"Inter",system-ui,-apple-system,"Segoe UI",sans-serif;
+  box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){--lbg:#1b2436;--link:#e8ecf5;--lmuted:#9aa4b8;--lcard:#232e45;--lline:#33405c;--la:#f5a623;--lt:#2dd4bf}
+}
+:root[data-theme="dark"]{--lbg:#1b2436;--link:#e8ecf5;--lmuted:#9aa4b8;--lcard:#232e45;--lline:#33405c;--la:#f5a623;--lt:#2dd4bf}
+html{scroll-padding-top:env(safe-area-inset-top,0px);scroll-behavior:smooth}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:400 1.05rem/1.6 var(--body);transition:background .9s,color .9s;overflow-x:hidden}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);background:var(--bg);z-index:10;transition:background .9s}
+body[data-s="2"],body[data-s="4"]{--bg:var(--lbg);--ink:var(--link);--muted:var(--lmuted);--card:var(--lcard);--line:var(--lline);--a:var(--la);--t:var(--lt)}
+
+/* the one shape that morphs between sections */
+.blob{position:fixed;left:50%;top:50%;z-index:0;width:var(--w,340px);height:var(--h,340px);
+  transform:translate(calc(-50% + var(--x,22vw)),calc(-50% + var(--y,0px)));
+  border-radius:var(--r,50%);background:var(--bf,rgba(45,212,191,.18));border:3px solid var(--bc,var(--teal));
+  display:grid;place-items:center;pointer-events:none;
+  transition:width 1s cubic-bezier(.6,0,.2,1),height 1s cubic-bezier(.6,0,.2,1),transform 1s cubic-bezier(.6,0,.2,1),border-radius 1s cubic-bezier(.6,0,.2,1),background-color 1s,border-color 1s,box-shadow 1s}
+.blob button{all:unset;font-size:4rem;cursor:pointer;opacity:0;pointer-events:none;transition:opacity .4s,transform .3s;border-radius:50%;padding:.4rem}
+.blob button:focus-visible{outline:3px solid var(--amber)}
+.blob button:hover{transform:scale(1.1)}
+body[data-s="0"] .blob button{opacity:1;pointer-events:auto}
+body.off .blob{--bc:#4b5563;--bf:rgba(75,85,99,.12)}
+body.off .blob button{filter:grayscale(1);opacity:.45}
+body:not(.off) .blob{box-shadow:0 0 90px rgba(45,212,191,.35)}
+body[data-s="1"]{--w:min(520px,80vw);--h:min(320px,50vw);--r:30% 70% 70% 30%/30% 30% 70% 70%;--x:24vw;--bc:var(--amber);--bf:rgba(245,166,35,.12)}
+body[data-s="2"]{--w:min(380px,70vw);--h:min(380px,70vw);--r:28%;--x:-26vw;--bc:var(--teal);--bf:rgba(45,212,191,.14)}
+body[data-s="3"]{--w:min(960px,94vw);--h:150px;--r:999px;--x:0px;--bc:var(--coral);--bf:rgba(242,95,92,.10)}
+body[data-s="4"]{--w:min(240px,50vw);--h:min(240px,50vw);--r:50%;--x:30vw;--bc:var(--amber);--bf:rgba(245,166,35,.16)}
+body[data-s="5"]{--w:min(460px,80vw);--h:min(460px,80vw);--r:60% 40% 55% 45%/45% 55% 40% 60%;--x:27vw;--bc:var(--coral);--bf:rgba(242,95,92,.12)}
+body[data-s="5"][data-site="warm"]{--bc:var(--amber);--bf:rgba(245,166,35,.14);--r:42% 58% 40% 60%/58% 42% 58% 42%}
+body[data-s="5"][data-site="cold"]{--bc:#7dd3fc;--bf:rgba(125,211,252,.12);--r:34%}
+body[data-s="6"]{--w:min(580px,90vw);--h:min(580px,90vw);--r:38%;--x:20vw;--bc:var(--amber);--bf:rgba(245,166,35,.10)}
+@media (max-width:760px){
+  body{--x:0px!important}
+  body[data-s="0"]{--y:24vh}
+  body[data-s="1"],body[data-s="2"],body[data-s="4"],body[data-s="5"],body[data-s="6"]{--y:0px}
+  .blob{opacity:.55}
+  body[data-s="0"] .blob{opacity:1}
+}
+
+main{position:relative;z-index:1}
+section{min-height:100svh;padding:12vh clamp(1.25rem,7vw,6rem);display:flex;flex-direction:column;justify-content:center;max-width:1200px;margin:0 auto}
+h1,h2{font-family:var(--disp);font-weight:800;line-height:1.02;letter-spacing:-.02em;margin:0 0 1rem;text-wrap:balance}
+h1{font-size:clamp(3rem,9vw,6.5rem);max-width:11ch}
+h2{font-size:clamp(2.1rem,5vw,3.6rem);max-width:16ch}
+p{margin:0 0 1rem;max-width:60ch}
+.muted{color:var(--muted)}
+.lede{font-size:1.2rem;max-width:34ch}
+.status{display:inline-flex;gap:.6rem;align-items:center;border:1px solid var(--coral);color:var(--coral);border-radius:.5rem;padding:.3rem .8rem;font-size:.85rem;font-weight:500;width:max-content;margin-bottom:1.5rem;transition:color .5s,border-color .5s}
+.status i{width:.55rem;height:.55rem;border-radius:50%;background:currentColor}
+body:not(.off) .status{color:var(--teal);border-color:var(--teal)}
+.btn{font:600 1rem var(--body);background:var(--amber);color:#111827;border:0;border-radius:.8rem;padding:.85rem 1.4rem;cursor:pointer;width:max-content;margin-top:1rem}
+.btn:focus-visible,.pick:focus-visible,.step:focus-visible,.drp:focus-visible{outline:3px solid var(--teal);outline-offset:3px}
+@keyframes flick{0%,18%,22%,60%,64%,100%{opacity:1}20%,62%{opacity:.25}63%{opacity:.7}}
+body.off h1{animation:flick 3.2s 1s 2 both}
+
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:1rem;margin:1.5rem 0}
+.card{background:var(--card);border:1px solid var(--line);border-radius:1.1rem;padding:1.1rem 1.25rem;transition:background .9s,border-color .9s}
+.card b{display:block;font-family:var(--disp);font-size:1.2rem;color:var(--a)}
+.card span{color:var(--muted);font-size:.95rem}
+.card .e{font-size:1.6rem;display:block;margin-bottom:.4rem}
+.key{color:var(--t);font-weight:600}
+
+/* umbrella: DRP expands to take over the row */
+.row{display:flex;gap:.8rem;margin:1.5rem 0;min-height:150px}
+.row>*{flex:1;border-radius:1.1rem;padding:1.1rem;transition:flex .8s cubic-bezier(.6,0,.2,1),opacity .5s,padding .8s;overflow:hidden}
+.chip{background:var(--card);border:1px solid var(--line);font-weight:600;display:flex;align-items:flex-end}
+.drp{all:unset;box-sizing:border-box;flex:1.6;background:var(--navy);color:#fff;cursor:pointer;border-radius:1.1rem;padding:1.1rem;transition:flex .8s cubic-bezier(.6,0,.2,1),border-radius .8s;display:flex;flex-direction:column;justify-content:flex-end;gap:.3rem}
+.drp b{font-family:var(--disp);font-size:1.3rem;color:var(--amber)}
+.drp small{color:#cbd5e1;font-size:.95rem}
+.row.zoom .chip{flex:0;padding-inline:0;opacity:0;border-width:0}
+.row.zoom .drp{flex:12;border-radius:2.5rem}
+.drp .more{max-height:0;opacity:0;overflow:hidden;transition:max-height .8s,opacity .8s;color:#fff}
+.row.zoom .more{max-height:8rem;opacity:1}
+
+/* outage anatomy */
+.bars{margin:2rem 0 1rem;position:relative}
+.seg{display:flex;height:64px;border-radius:1rem;overflow:hidden;font-weight:600;color:#111827}
+.seg>div{padding:.7rem 1rem;width:0;overflow:hidden;white-space:nowrap;transition:width 1.4s cubic-bezier(.6,0,.2,1) .3s}
+.seg .r{background:var(--amber)}.seg .x{background:var(--coral);text-align:center;padding:.7rem 0}.seg .u{background:var(--teal)}
+body[data-s="3"] .seg .r{width:38%}body[data-s="3"] .seg .x{width:10%}body[data-s="3"] .seg .u{width:52%}
+.mtd{margin-top:.8rem;height:34px;border-radius:.6rem;background:var(--coral);color:#111827;font-weight:600;font-size:.9rem;padding:.35rem .9rem;width:0;overflow:hidden;white-space:nowrap;transition:width 1.6s cubic-bezier(.6,0,.2,1) .9s}
+body[data-s="3"] .mtd{width:62%}
+.def{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1rem;margin-top:1.5rem}
+.def b{font-family:var(--disp);font-size:1.5rem;display:block}
+
+/* loop */
+.steps{display:flex;gap:.5rem;margin:1.5rem 0;flex-wrap:wrap}
+.step{all:unset;box-sizing:border-box;cursor:pointer;width:4.2rem;height:4.2rem;border-radius:50%;display:grid;place-items:center;font:800 1.5rem var(--disp);background:var(--teal);color:#111827;transition:border-radius .5s,background .5s,transform .5s}
+.step:nth-child(odd){background:var(--amber)}
+.step[aria-pressed="true"]{border-radius:1.3rem;transform:scale(1.18);background:var(--navy);color:#fff;box-shadow:0 0 0 3px var(--a)}
+.detail{min-height:7rem;max-width:36ch}
+.detail b{font-family:var(--disp);font-size:2rem;display:block;color:var(--a)}
+
+/* sites */
+.picks{display:flex;gap:.6rem;flex-wrap:wrap;margin:1rem 0}
+.pick{all:unset;box-sizing:border-box;cursor:pointer;padding:.7rem 1.3rem;border-radius:999px;border:2px solid var(--line);font-weight:600;transition:all .4s}
+.pick[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.meter{display:grid;grid-template-columns:4.5rem 1fr;gap:.8rem;align-items:center;margin:.6rem 0;max-width:420px}
+.meter div{height:12px;border-radius:9px;background:var(--line);overflow:hidden}
+.meter i{display:block;height:100%;width:var(--v,0);border-radius:9px;background:var(--bc2,var(--coral));transition:width .9s cubic-bezier(.6,0,.2,1),background .6s}
+.rule{font-family:var(--disp);font-size:2rem;font-weight:800;color:var(--a);margin-top:1.5rem}
+
+.chips{display:flex;gap:.8rem;flex-wrap:wrap;margin:1.5rem 0}
+.chips span{border:1px solid var(--line);background:var(--card);border-radius:1rem;padding:.8rem 1.2rem;font-weight:600}
+.chips span:nth-child(1){border-top:3px solid var(--amber)}.chips span:nth-child(2){border-top:3px solid var(--teal)}.chips span:nth-child(3){border-top:3px solid var(--coral)}
+footer{padding:0 clamp(1.25rem,7vw,6rem) 6vh;color:var(--muted);font-size:.85rem;max-width:1200px;margin:0 auto}
+@media (max-width:760px){.row{flex-wrap:wrap}.row>*{flex:1 1 40%}.row.zoom .drp{flex:1 1 100%}.row.zoom .chip{display:none}}
+@media (prefers-reduced-motion:reduce){*{transition-duration:.01s!important;animation:none!important}html{scroll-behavior:auto}}
+</style>
+</head>
+<body class="off" data-s="0" data-site="hot">
+<div class="blob" aria-hidden="false"><button id="bolt" aria-label="Restore power">⚡</button></div>
+<main>
+
+<section data-s="0" id="s0">
+  <span class="status"><i></i><span id="stat">System status: offline</span></span>
+  <p class="muted">Information Assurance and Security</p>
+  <h1>When the lights go out</h1>
+  <p class="lede" id="sub">Business Continuity and Disaster Recovery Planning. Tap the bolt to bring the power back.</p>
+  <p class="muted">3rd Year Information Technology</p>
+  <button class="btn" id="power">Restore power</button>
+</section>
+
+<section data-s="1">
+  <h2>What can go wrong?</h2>
+  <div class="grid">
+    <div class="card"><span class="e">🌪️</span><b>Natural disasters</b><span>Typhoons, floods, earthquakes</span></div>
+    <div class="card"><span class="e">🦠</span><b>Cyberattacks</b><span>Ransomware and malware</span></div>
+    <div class="card"><span class="e">🔌</span><b>Power outage</b><span>Brownouts and UPS failure</span></div>
+    <div class="card"><span class="e">💽</span><b>Hardware failure</b><span>Dead disks and servers</span></div>
+    <div class="card"><span class="e">🧑‍💻</span><b>Human error</b><span>Wrong delete, wrong config</span></div>
+    <div class="card"><span class="e">🔥</span><b>Fire</b><span>Office or data center lost</span></div>
+  </div>
+  <p class="key">Every plan protects one thing: Availability, the A in CIA.</p>
+</section>
+
+<section data-s="2">
+  <h2>BCP is the umbrella, DRP sits inside</h2>
+  <p class="muted">BCP keeps the whole business running. Select DRP to zoom in.</p>
+  <div class="row" id="row">
+    <div class="chip">People</div><div class="chip">Processes</div><div class="chip">Suppliers</div>
+    <button class="drp" id="drp" aria-expanded="false"><b>DRP: bring IT back</b><small>Servers, data, networks and apps.</small><span class="more">While BCP asks “how do we keep operating while things are broken?”, DRP is the technical team’s answer for getting systems running again.</span></button>
+  </div>
+</section>
+
+<section data-s="3">
+  <h2>Anatomy of an outage</h2>
+  <div class="bars">
+    <div class="seg"><div class="r">RPO</div><div class="x">💥</div><div class="u">RTO</div></div>
+    <div class="mtd">MTD: longest outage the business can survive</div>
+  </div>
+  <div class="def">
+    <div><b>RPO</b><span class="muted">How much data we can lose. It runs back to the last good backup.</span></div>
+    <div><b>RTO</b><span class="muted">How fast we must be back.</span></div>
+    <div><b>MTD</b><span class="muted">The danger zone for the business.</span></div>
+  </div>
+  <p class="key" style="margin-top:1.5rem">The BIA finds the critical functions and sets these numbers.</p>
+</section>
+
+<section data-s="4">
+  <h2>The planning loop</h2>
+  <div class="steps" id="steps" role="group" aria-label="Planning steps">
+    <button class="step" aria-pressed="true">1</button><button class="step" aria-pressed="false">2</button><button class="step" aria-pressed="false">3</button><button class="step" aria-pressed="false">4</button><button class="step" aria-pressed="false">5</button>
+  </div>
+  <div class="detail" aria-live="polite"><b id="st">Analyze</b><span id="sd">Run the BIA, find critical functions.</span></div>
+  <p class="key">↻ After every drill, incident or change, go back to step 1.</p>
+</section>
+
+<section data-s="5">
+  <h2>Where do we recover?</h2>
+  <div class="picks" id="picks" role="group" aria-label="Recovery site type">
+    <button class="pick" aria-pressed="true">🔥 Hot site</button><button class="pick" aria-pressed="false">🌤️ Warm site</button><button class="pick" aria-pressed="false">❄️ Cold site</button>
+  </div>
+  <p id="sited" style="min-height:3rem">Mirrored and ready.</p>
+  <div class="meter"><span>Speed</span><div><i id="mv1" style="--v:95%"></i></div></div>
+  <div class="meter"><span>Cost</span><div><i id="mv2" style="--v:95%"></i></div></div>
+  <div class="rule">3-2-1</div>
+  <p>3 copies of data, 2 media types, 1 copy offsite.</p>
+</section>
+
+<section data-s="6">
+  <h2>Plan. Test. Repeat.</h2>
+  <p class="lede">A plan that was never tested is only a guess.</p>
+  <div class="chips"><span>Know your critical systems</span><span>Set RTO and RPO</span><span>Test your backups</span></div>
+  <p class="muted">References: ISO 22301, NIST SP 800-34, ISO/IEC 27031</p>
+</section>
+</main>
+<footer>BCP and DRP · Information Assurance and Security</footer>
+
+<script>
+(function(){
+  var b=document.body;
+  var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){b.dataset.s=e.target.dataset.s}})},{threshold:.55});
+  document.querySelectorAll('section').forEach(function(s){io.observe(s)});
+
+  function power(){
+    if(!b.classList.contains('off'))return;
+    b.classList.remove('off');
+    document.getElementById('stat').textContent='System status: online';
+    document.getElementById('sub').textContent='Power’s back. Keep scrolling to see how a plan gets you here.';
+    document.getElementById('power').textContent='Keep scrolling';
+  }
+  document.getElementById('bolt').onclick=power;
+  document.getElementById('power').onclick=function(){
+    if(b.classList.contains('off')){power()}else{document.querySelector('[data-s="1"]').scrollIntoView()}
+  };
+
+  var row=document.getElementById('row'),drp=document.getElementById('drp');
+  drp.onclick=function(){var z=row.classList.toggle('zoom');drp.setAttribute('aria-expanded',z)};
+
+  var S=[['Analyze','Run the BIA, find critical functions.'],['Assess','Spot threats and weak points.'],['Strategize','Pick backups and recovery sites.'],['Document','Write roles, steps and contacts.'],['Test','Drill, review, then update.']];
+  var steps=document.querySelectorAll('.step');
+  steps.forEach(function(el,i){el.onclick=function(){
+    steps.forEach(function(x){x.setAttribute('aria-pressed','false')});
+    el.setAttribute('aria-pressed','true');
+    document.getElementById('st').textContent=S[i][0];
+    document.getElementById('sd').textContent=S[i][1];
+  }});
+
+  var K=[['hot','Mirrored and ready.',95,95,'#f25f5c'],['warm','Hardware ready, restore data.',60,55,'#f5a623'],['cold','Empty space and power.',25,20,'#2dd4bf']];
+  var picks=document.querySelectorAll('.pick');
+  picks.forEach(function(el,i){el.onclick=function(){
+    picks.forEach(function(x){x.setAttribute('aria-pressed','false')});
+    el.setAttribute('aria-pressed','true');
+    var k=K[i];b.dataset.site=k[0];
+    document.getElementById('sited').textContent=k[1];
+    var m1=document.getElementById('mv1'),m2=document.getElementById('mv2');
+    m1.style.setProperty('--v',k[2]+'%');m2.style.setProperty('--v',k[3]+'%');
+    m1.style.setProperty('--bc2',k[4]);m2.style.setProperty('--bc2',k[4]);
+  }});
+})();
+</script>
+</body>
+</html>
